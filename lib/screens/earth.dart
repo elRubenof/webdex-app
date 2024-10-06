@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_earth_globe/flutter_earth_globe.dart';
 import 'package:flutter_earth_globe/flutter_earth_globe_controller.dart';
+import 'package:flutter_earth_globe/globe_coordinates.dart';
 import 'package:flutter_earth_globe/point.dart';
 import 'package:flutter_earth_globe/point_connection.dart';
 import 'package:webdex_app/screens/map.dart';
@@ -15,6 +16,7 @@ class EarthScreen extends StatefulWidget {
 
 class _EarthScreenState extends State<EarthScreen> {
   late FlutterEarthGlobeController _controller;
+  GlobeCoordinates? focusCoords;
 
   List<PointConnection> connections = [];
   List<Point> points = [];
@@ -23,6 +25,7 @@ class _EarthScreenState extends State<EarthScreen> {
   void initState() {
     _controller = FlutterEarthGlobeController(
       zoom: 0.7,
+      maxZoom: 1.55,
       isBackgroundFollowingSphereRotation: true,
       background: const AssetImage('assets/2k_stars.jpg'),
       surface: const AssetImage('assets/2k_earth.jpg'),
@@ -37,16 +40,24 @@ class _EarthScreenState extends State<EarthScreen> {
       body: FlutterEarthGlobe(
         controller: _controller,
         radius: 120,
-        onTap: (coordinates) {
-          Navigator.of(context).push(
-            CustomPageRoute(
-              MapScreen(
-                lat: coordinates!.latitude,
-                lon: coordinates.longitude,
-              ),
-            ),
-          );
+        onZoomChanged: (zoom) {
+          if (zoom >= 1.55) _travel2D();
         },
+        onTap: (coordinates) => _travel2D(coords: coordinates),
+        onHover: (coordinates) => focusCoords = coordinates,
+      ),
+    );
+  }
+
+  void _travel2D({GlobeCoordinates? coords}) {
+    coords ??= focusCoords!;
+
+    Navigator.of(context).push(
+      CustomPageRoute(
+        MapScreen(
+          lat: coords.latitude,
+          lon: coords.longitude,
+        ),
       ),
     );
   }
