@@ -58,14 +58,25 @@ class _CustomSearchBarState extends State<CustomSearchBar> {
         ),
         controller: _controller,
         onSubmitted: (value) async {
-          if (value.isEmpty) return;
+          if (value.isEmpty || widget.onSubmitted == null) return;
+
+          try {
+            widget.onSubmitted!(
+              GlobeCoordinates(
+                double.parse(value.split(' ')[0]),
+                double.parse(value.split(' ')[1]),
+              ),
+            );
+
+            return;
+          } catch (e) {}
 
           final response = await http.get(Uri.parse(
               "https://nominatim.openstreetmap.org/search.php?q=$value&format=jsonv2"));
           final x = json.decode(response.body);
 
           _controller.clear();
-          if (x is List && x.isNotEmpty && widget.onSubmitted != null) {
+          if (x is List && x.isNotEmpty) {
             widget.onSubmitted!(
               GlobeCoordinates(
                 double.parse(x[0]['lat']),

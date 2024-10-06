@@ -26,6 +26,7 @@ class _EarthScreenState extends State<EarthScreen> {
   void initState() {
     _controller = FlutterEarthGlobeController(
       zoom: 0.7,
+      minZoom: 0.5,
       maxZoom: 1.55,
       isBackgroundFollowingSphereRotation: true,
       background: const AssetImage('assets/2k_stars.jpg'),

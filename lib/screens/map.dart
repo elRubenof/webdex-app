@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
@@ -10,7 +9,8 @@ import 'package:http/http.dart' as http;
 import 'package:webdex_app/widgets/custom_search_bar.dart';
 import 'package:webdex_app/widgets/details_card.dart';
 
-ValueNotifier responseBody = ValueNotifier(null);
+Map responseBody = {};
+Function? update;
 
 class MapScreen extends StatefulWidget {
   final double lat, lon;
@@ -31,12 +31,13 @@ class _MapScreenState extends State<MapScreen> {
   final _controller = MapController();
   final GlobalKey _key = GlobalKey();
 
-  @override
-  void initState() {
-    super.initState();
+  List<Polygon<Object>> polygons = [];
 
-    Future.delayed(Duration.zero)
-        .then((e) => (_key as ScaffoldState).openDrawer());
+  void updateApp() {
+    if (update != null) {
+      update!();
+      setState(() {});
+    }
   }
 
   @override
@@ -48,7 +49,7 @@ class _MapScreenState extends State<MapScreen> {
       drawerEnableOpenDragGesture: false,
       drawerScrimColor: Colors.transparent,
       onEndDrawerChanged: (isOpened) {
-        if (!isOpened) responseBody.value = null;
+        if (!isOpened) responseBody = {};
       },
       drawer: kIsWeb
           ? const Drawer(
@@ -61,6 +62,7 @@ class _MapScreenState extends State<MapScreen> {
           FlutterMap(
             mapController: _controller,
             options: MapOptions(
+              minZoom: 4.5,
               initialCenter: LatLng(widget.lat, widget.lon),
               initialZoom: widget.search ? 9 : 5,
               onMapReady: () {
@@ -70,7 +72,9 @@ class _MapScreenState extends State<MapScreen> {
                 }
               },
               onPositionChanged: (camera, hasGesture) {
-                if (_controller.camera.zoom < 4.5) Navigator.pop(context);
+                if (kIsWeb && _controller.camera.zoom <= 4.5) {
+                  Navigator.pop(context);
+                }
               },
               onTap: (tapPosition, point) {
                 travelTo(point.latitude, point.longitude);
@@ -79,8 +83,9 @@ class _MapScreenState extends State<MapScreen> {
             children: [
               TileLayer(
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName: 'com.example.app',
+                userAgentPackageName: 'com.webdex.landsat',
               ),
+              PolygonLayer(polygons: polygons),
             ],
           ),
           Container(
@@ -90,7 +95,7 @@ class _MapScreenState extends State<MapScreen> {
               onSubmitted: (p0) => travelTo(p0.latitude, p0.longitude),
             ),
           ),
-          if (Platform.isIOS)
+          if (!kIsWeb)
             SafeArea(
               child: Container(
                 margin: EdgeInsets.only(bottom: height * 0.05),
@@ -110,10 +115,11 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   void travelTo(double lat, double lon) {
+    setState(() => polygons.clear());
     loadLocationDetails(lat, lon);
 
     openDetails();
-    _controller.move(LatLng(lat, lon), 9);
+    _controller.move(LatLng(lat, lon), 8);
   }
 
   void openDetails() {
@@ -138,20 +144,75 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  void loadLocationDetails(double lat, double lon) {
-    http
-        .get(Uri.parse("https://webdex-api.vercel.app/path/?lat=$lat&lon=$lon"))
-        .then((value) async {
-      Map response = json.decode(value.body);
+  void loadLocationDetails(double lat, double lon) async {
+    final x1 = await http.get(
+      Uri.parse("https://webdex-api.vercel.app/path/?lat=$lat&lon=$lon"),
+    );
+    Map response = json.decode(x1.body);
 
-      try {
-        final geoRes = await http.get(Uri.parse(
-            "https://nominatim.openstreetmap.org/reverse?format=json&lat=$lat&lon=$lon&zoom=10&addressdetails=1"));
+    int index = 0;
+    for (var chunk in response['chunks']) {
+      final x2 = await http.get(
+        Uri.parse(
+            "https://webdex-api.vercel.app/search/?path=${chunk['path']}&row=${chunk['row']}"),
+      );
 
-        response['location'] = json.decode(geoRes.body)['address']['state'];
-      } catch (e) {}
+      final e = json.decode(x2.body);
+      response['chunks'][index]['items'] = [];
 
-      responseBody.value = response;
-    });
+      int count = 0;
+      for (var item in e['data']['results']) {
+        response['chunks'][index]['items'].add({
+          "entityId": item['entityId'],
+          "displayId": item['displayId'],
+          "browseName": item['browse'][0]['browseName'],
+          "browsePath": item['browse'][0]['browsePath'],
+          "thumbnailPath": item['browse'][0]['thumbnailPath'],
+        });
+
+        if (count++ >= 3) break;
+      }
+
+      index++;
+    }
+
+    try {
+      final geoRes = await http.get(Uri.parse(
+          "https://nominatim.openstreetmap.org/reverse?format=json&lat=$lat&lon=$lon&zoom=10&addressdetails=1"));
+
+      response['location'] = json.decode(geoRes.body)['address']['state'];
+    } catch (e) {}
+
+    responseBody = response;
+
+    for (var chunk in response["chunks"]) {
+      polygons.add(
+        Polygon(
+          label: "Path: ${chunk["path"]} Row: ${chunk["row"]}",
+          borderColor: Colors.red,
+          borderStrokeWidth: 3,
+          points: [
+            LatLng(
+              chunk["ul_lat"],
+              chunk["ul_lon"],
+            ),
+            LatLng(
+              chunk["ll_lat"],
+              chunk["ll_lon"],
+            ),
+            LatLng(
+              chunk["lr_lat"],
+              chunk["lr_lon"],
+            ),
+            LatLng(
+              chunk["ur_lat"],
+              chunk["ur_lon"],
+            ),
+          ],
+        ),
+      );
+    }
+
+    updateApp();
   }
 }
