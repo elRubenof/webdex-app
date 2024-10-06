@@ -10,8 +10,13 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      home: EarthScreen(),
+    return MaterialApp(
+      theme: Theme.of(context).copyWith(
+        textSelectionTheme: const TextSelectionThemeData(
+          selectionColor: Colors.white24,
+        ),
+      ),
+      home: const EarthScreen(),
     );
   }
 }

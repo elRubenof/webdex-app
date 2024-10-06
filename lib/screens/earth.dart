@@ -6,6 +6,7 @@ import 'package:flutter_earth_globe/point.dart';
 import 'package:flutter_earth_globe/point_connection.dart';
 import 'package:webdex_app/screens/map.dart';
 import 'package:webdex_app/utils/custom_page_transition.dart';
+import 'package:webdex_app/widgets/custom_search_bar.dart';
 
 class EarthScreen extends StatefulWidget {
   const EarthScreen({super.key});
@@ -36,20 +37,34 @@ class _EarthScreenState extends State<EarthScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final height = MediaQuery.of(context).size.height;
+
     return Scaffold(
-      body: FlutterEarthGlobe(
-        controller: _controller,
-        radius: 120,
-        onZoomChanged: (zoom) {
-          if (zoom >= 1.55) _travel2D();
-        },
-        onTap: (coordinates) => _travel2D(coords: coordinates),
-        onHover: (coordinates) => focusCoords = coordinates,
+      body: Stack(
+        children: [
+          FlutterEarthGlobe(
+            controller: _controller,
+            radius: 120,
+            onZoomChanged: (zoom) {
+              if (zoom >= 1.55) _travel2D();
+            },
+            onTap: (coordinates) => _travel2D(coords: coordinates),
+            onHover: (coordinates) => focusCoords = coordinates,
+          ),
+          Container(
+            margin: EdgeInsets.only(bottom: height * 0.05),
+            alignment: Alignment.bottomCenter,
+            child: CustomSearchBar(
+              darkMode: true,
+              onSubmitted: (coords) => _travel2D(coords: coords, search: true),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  void _travel2D({GlobeCoordinates? coords}) {
+  void _travel2D({GlobeCoordinates? coords, search = false}) {
     coords ??= focusCoords!;
 
     Navigator.of(context).push(
@@ -57,6 +72,7 @@ class _EarthScreenState extends State<EarthScreen> {
         MapScreen(
           lat: coords.latitude,
           lon: coords.longitude,
+          search: search,
         ),
       ),
     );
