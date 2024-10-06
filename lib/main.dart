@@ -11,6 +11,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      title: "Landex",
       theme: Theme.of(context).copyWith(
         textSelectionTheme: const TextSelectionThemeData(
           selectionColor: Colors.white24,
