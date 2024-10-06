@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_earth_globe/globe_coordinates.dart';
 import 'package:http/http.dart' as http;
@@ -39,7 +40,7 @@ class _CustomSearchBarState extends State<CustomSearchBar> {
             )
         ],
       ),
-      width: width * 0.28,
+      width: width * (kIsWeb ? 0.28 : 0.85),
       child: TextField(
         maxLines: 1,
         cursorColor: Colors.white,
@@ -63,6 +64,7 @@ class _CustomSearchBarState extends State<CustomSearchBar> {
               "https://nominatim.openstreetmap.org/search.php?q=$value&format=jsonv2"));
           final x = json.decode(response.body);
 
+          _controller.clear();
           if (x is List && x.isNotEmpty && widget.onSubmitted != null) {
             widget.onSubmitted!(
               GlobeCoordinates(

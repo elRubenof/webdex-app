@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:webdex_app/screens/map.dart';
@@ -74,7 +75,8 @@ class _DetailsCardState extends State<DetailsCard> {
                   ],
                 ),
               ),
-              const Expanded(child: SizedBox()),
+              if (kIsWeb) const Expanded(child: SizedBox()),
+              if (!kIsWeb) SizedBox(height: height * 0.05),
               if (dates != null)
                 Table(
                   border: const TableBorder(

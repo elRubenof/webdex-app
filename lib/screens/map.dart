@@ -1,5 +1,8 @@
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -47,10 +50,12 @@ class _MapScreenState extends State<MapScreen> {
       onEndDrawerChanged: (isOpened) {
         if (!isOpened) responseBody.value = null;
       },
-      drawer: const Drawer(
-        shape: BeveledRectangleBorder(),
-        child: DetailsCard(),
-      ),
+      drawer: kIsWeb
+          ? const Drawer(
+              shape: BeveledRectangleBorder(),
+              child: DetailsCard(),
+            )
+          : null,
       body: Stack(
         children: [
           FlutterMap(
@@ -61,7 +66,7 @@ class _MapScreenState extends State<MapScreen> {
               onMapReady: () {
                 if (widget.search) {
                   loadLocationDetails(widget.lat, widget.lon);
-                  openDrawer();
+                  openDetails();
                 }
               },
               onPositionChanged: (camera, hasGesture) {
@@ -85,6 +90,20 @@ class _MapScreenState extends State<MapScreen> {
               onSubmitted: (p0) => travelTo(p0.latitude, p0.longitude),
             ),
           ),
+          if (Platform.isIOS)
+            SafeArea(
+              child: Container(
+                margin: EdgeInsets.only(bottom: height * 0.05),
+                alignment: Alignment.topLeft,
+                child: CupertinoButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Icon(
+                    Icons.arrow_back_ios_new,
+                    color: Colors.black,
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -93,12 +112,30 @@ class _MapScreenState extends State<MapScreen> {
   void travelTo(double lat, double lon) {
     loadLocationDetails(lat, lon);
 
-    openDrawer();
+    openDetails();
     _controller.move(LatLng(lat, lon), 9);
   }
 
-  void openDrawer() {
-    (_key.currentState as ScaffoldState).openDrawer();
+  void openDetails() {
+    if (kIsWeb) {
+      (_key.currentState as ScaffoldState).openDrawer();
+      return;
+    }
+
+    showModalBottomSheet<dynamic>(
+      context: context,
+      builder: (context) {
+        final height = MediaQuery.of(context).size.height;
+        return Wrap(
+          children: [
+            Container(
+              margin: EdgeInsets.only(bottom: height * 0.03),
+              child: const DetailsCard(),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void loadLocationDetails(double lat, double lon) {
