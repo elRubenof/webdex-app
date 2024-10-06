@@ -150,31 +150,33 @@ class _MapScreenState extends State<MapScreen> {
     );
     Map response = json.decode(x1.body);
 
-    int index = 0;
-    for (var chunk in response['chunks']) {
-      final x2 = await http.get(
-        Uri.parse(
-            "https://webdex-api.vercel.app/search/?path=${chunk['path']}&row=${chunk['row']}"),
-      );
+    try {
+      int index = 0;
+      for (var chunk in response['chunks']) {
+        final x2 = await http.get(
+          Uri.parse(
+              "https://webdex-api.vercel.app/search/?path=${chunk['path']}&row=${chunk['row']}"),
+        );
 
-      final e = json.decode(x2.body);
-      response['chunks'][index]['items'] = [];
+        final e = json.decode(x2.body);
+        response['chunks'][index]['items'] = [];
 
-      int count = 0;
-      for (var item in e['data']['results']) {
-        response['chunks'][index]['items'].add({
-          "entityId": item['entityId'],
-          "displayId": item['displayId'],
-          "browseName": item['browse'][0]['browseName'],
-          "browsePath": item['browse'][0]['browsePath'],
-          "thumbnailPath": item['browse'][0]['thumbnailPath'],
-        });
+        int count = 0;
+        for (var item in e['data']['results']) {
+          response['chunks'][index]['items'].add({
+            "entityId": item['entityId'],
+            "displayId": item['displayId'],
+            "browseName": item['browse'][0]['browseName'],
+            "browsePath": item['browse'][0]['browsePath'],
+            "thumbnailPath": item['browse'][0]['thumbnailPath'],
+          });
 
-        if (count++ >= 3) break;
+          if (count++ >= 3) break;
+        }
+
+        index++;
       }
-
-      index++;
-    }
+    } catch (e) {}
 
     try {
       final geoRes = await http.get(Uri.parse(

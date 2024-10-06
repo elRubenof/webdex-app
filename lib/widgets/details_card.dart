@@ -248,6 +248,8 @@ class _DetailsCardState extends State<DetailsCard> {
   Widget chunks() {
     List<Widget> cards = [];
     for (var item in responseBody['chunks']) {
+      if (item['items'] == null || item['items'].isEmpty) continue;
+
       cards.add(
         Container(
           margin: const EdgeInsets.symmetric(vertical: 6),
